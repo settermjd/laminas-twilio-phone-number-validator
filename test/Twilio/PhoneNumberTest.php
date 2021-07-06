@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Prophecy\PhpUnit\ProphecyTrait;
 use Prophecy\Prophecy\ObjectProphecy;
 use Settermjd\Validator\Twilio\PhoneNumber;
+use Twilio\Exceptions\TwilioException;
 use Twilio\Rest\Client;
 use Twilio\Rest\Lookups;
 
@@ -21,13 +22,33 @@ class PhoneNumberTest extends TestCase
         string $phoneNumberNational
     ): void
     {
-        $response = '{"caller_name": null, "country_code": "DE", "phone_number": "' . $phoneNumberInternational . '", "national_format": "' . $phoneNumberNational . '", "carrier": null, "add_ons": null, "url": "https://lookups.twilio.com/v1/PhoneNumbers/' . $phoneNumberInternational . '"}';
+        $response = '{
+  "caller_name": null,
+  "carrier": {
+    "error_code": null,
+    "mobile_country_code": "310",
+    "mobile_network_code": "456",
+    "name": "verizon",
+    "type": "mobile"
+  },
+  "country_code": "US",
+  "national_format": "(510) 867-5310",
+  "phone_number": "+15108675310",
+  "add_ons": null,
+  "url": "https://lookups.twilio.com/v1/PhoneNumbers/+15108675310"
+}';
+        $phoneNumberInstance = $this->prophesize(Lookups\V1\PhoneNumberInstance::class);
+
+        $phoneNumberContext = $this->prophesize(Lookups\V1\PhoneNumberContext::class);
+        $phoneNumberContext->fetch(["type" => ["carrier"]])
+            ->shouldBeCalled()
+            ->willReturn($phoneNumberInstance);
 
         /** @var ObjectProphecy|Lookups\V1 $v1 */
         $v1 = $this->prophesize(Lookups\V1::class);
         $v1->phoneNumbers($phoneNumberInternational)
             ->shouldBeCalled()
-            ->willReturn($response);
+            ->willReturn($phoneNumberContext);
 
         /** @var ObjectProphecy|Lookups $lookups */
         $lookups = $this->prophesize(Lookups::class);
@@ -49,13 +70,16 @@ class PhoneNumberTest extends TestCase
      */
     public function testCanSuccessfullyValidateInvalidPhoneNumbers(string $phoneNumber): void
     {
-        $response = '{"code": 20404, "message": "The requested resource /PhoneNumbers/' . $phoneNumber . ' was not found", "more_info": "https://www.twilio.com/docs/errors/20404", "status": 404}';
+        $phoneNumberContext = $this->prophesize(Lookups\V1\PhoneNumberContext::class);
+        $phoneNumberContext->fetch(["type" => ["carrier"]])
+            ->shouldBeCalled()
+            ->willThrow(TwilioException::class);
 
         /** @var ObjectProphecy|Lookups\V1 $v1 */
         $v1 = $this->prophesize(Lookups\V1::class);
         $v1->phoneNumbers($phoneNumber)
             ->shouldBeCalled()
-            ->willReturn($response);
+            ->willReturn($phoneNumberContext);
 
         /** @var ObjectProphecy|Lookups $lookups */
         $lookups = $this->prophesize(Lookups::class);

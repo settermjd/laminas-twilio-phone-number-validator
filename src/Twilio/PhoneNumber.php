@@ -7,6 +7,7 @@ namespace Settermjd\Validator\Twilio;
 use Laminas\Stdlib\ArrayUtils;
 use Laminas\Validator\AbstractValidator;
 use Traversable;
+use Twilio\Exceptions\TwilioException;
 use Twilio\Rest\Client;
 
 class PhoneNumber extends AbstractValidator
@@ -39,18 +40,16 @@ class PhoneNumber extends AbstractValidator
     {
         $this->setValue($value);
 
-        $response = $this->client
-            ->lookups
-            ->v1
-            ->phoneNumbers($value);
-
-        $response = json_decode($response, false);
-
-        if (property_exists($response, 'status') && $response->status === 404) {
+        try {
+            $this->client
+                ->lookups
+                ->v1
+                ->phoneNumbers($value)
+                ->fetch(["type" => ["carrier"]]);
+            return true;
+        } catch (TwilioException $e) {
             $this->error(self::PHONE_NUMBER);
             return false;
         }
-
-        return true;
     }
 }
