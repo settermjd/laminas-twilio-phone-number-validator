@@ -3,8 +3,24 @@
     "description": "This package makes use of the Twilio Phone Number Lookup API to validate phone numbers",
     "type": "library",
     "require": {
+        "php": "^7.4 || ~8.0.0",
         "laminas/laminas-validator": "^2.14",
         "twilio/sdk": "^6.26"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "phpspec/prophecy": "^1.13",
+        "phpspec/prophecy-phpunit": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Settermjd\\Validator\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SettermjdTest\\Validator\\": "test/"
+        }
     },
     "license": "MIT",
     "authors": [
@@ -14,8 +30,7 @@
         }
     ],
     "minimum-stability": "stable",
-    "require-dev": {
-        "phpunit/phpunit": "^9.5",
-        "phpspec/prophecy": "^1.13"
+    "scripts": {
+        "test": "phpunit"
     }
 }
