@@ -1,0 +1,21 @@
+{
+    "name": "settermjd/laminas-phone-number-validator",
+    "description": "This package makes use of the Twilio Phone Number Lookup API to validate phone numbers",
+    "type": "library",
+    "require": {
+        "laminas/laminas-validator": "^2.14",
+        "twilio/sdk": "^6.26"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Matthew Setter",
+            "email": "matthew@matthewsetter.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "phpspec/prophecy": "^1.13"
+    }
+}
