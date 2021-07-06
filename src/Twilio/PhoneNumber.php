@@ -38,6 +38,10 @@ class PhoneNumber extends AbstractValidator
      */
     public function isValid($value)
     {
+        if ($value === '') {
+            return false;
+        }
+
         $this->setValue($value);
 
         try {
