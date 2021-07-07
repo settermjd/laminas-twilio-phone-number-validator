@@ -12,13 +12,17 @@ use Twilio\Rest\Client;
 
 class PhoneNumber extends AbstractValidator
 {
-    private Client $client;
-
-    public const PHONE_NUMBER = 'phone_number';
+    public const PHONE_NUMBER_INTL = 'phone_number_intl';
+    public const PHONE_NUMBER_NTL = 'phone_number_ntl';
 
     protected array $messageTemplates = [
-        self::PHONE_NUMBER => "'%value%' is not a valid phone number in E.164 format.",
+        self::PHONE_NUMBER_INTL => "'%value%' is not a valid phone number in E.164 format.",
+        self::PHONE_NUMBER_NTL => "'%value%' is not a valid nationally formatted phone number.",
     ];
+
+    private Client $client;
+
+    private string $countryCode = '';
 
     public function __construct($options = null)
     {
@@ -30,6 +34,10 @@ class PhoneNumber extends AbstractValidator
 
         if (array_key_exists('client', $options)) {
             $this->client = $options['client'];
+        }
+
+        if (array_key_exists('countryCode', $options) && $options['countryCode'] !== '') {
+            $this->countryCode = $options['countryCode'];
         }
     }
 
@@ -45,14 +53,23 @@ class PhoneNumber extends AbstractValidator
         $this->setValue($value);
 
         try {
+            $options = ["type" => ["carrier"]];
+            if ($this->countryCode !== '') {
+                $options['countryCode'] = $this->countryCode;
+            }
+
             $this->client
                 ->lookups
                 ->v1
                 ->phoneNumbers($value)
-                ->fetch(["type" => ["carrier"]]);
+                ->fetch($options);
             return true;
         } catch (TwilioException $e) {
-            $this->error(self::PHONE_NUMBER);
+            if ($this->countryCode === '') {
+                $this->error(self::PHONE_NUMBER_INTL);
+            } else {
+                $this->error(self::PHONE_NUMBER_NTL);
+            }
             return false;
         }
     }

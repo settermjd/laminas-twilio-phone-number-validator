@@ -17,30 +17,19 @@ class PhoneNumberTest extends TestCase
     /**
      * @dataProvider validPhoneNumberProvider
      */
-    public function testCanSuccessfullyValidatePhoneNumber(
-        string $phoneNumberInternational,
-        string $phoneNumberNational
-    ): void
+    public function testCanSuccessfullyValidatePhoneNumber(string $phoneNumberInternational, string $countryCode = ''): void
     {
-        $response = '{
-  "caller_name": null,
-  "carrier": {
-    "error_code": null,
-    "mobile_country_code": "310",
-    "mobile_network_code": "456",
-    "name": "verizon",
-    "type": "mobile"
-  },
-  "country_code": "US",
-  "national_format": "(510) 867-5310",
-  "phone_number": "+15108675310",
-  "add_ons": null,
-  "url": "https://lookups.twilio.com/v1/PhoneNumbers/+15108675310"
-}';
         $phoneNumberInstance = $this->prophesize(Lookups\V1\PhoneNumberInstance::class);
-
         $phoneNumberContext = $this->prophesize(Lookups\V1\PhoneNumberContext::class);
-        $phoneNumberContext->fetch(["type" => ["carrier"]])
+
+        $fetchData = [
+            "type" => ["carrier"]
+        ];
+        if ($countryCode !== '') {
+            $fetchData["countryCode"] = $countryCode;
+        }
+
+        $phoneNumberContext->fetch($fetchData)
             ->shouldBeCalled()
             ->willReturn($phoneNumberInstance);
 
@@ -59,6 +48,10 @@ class PhoneNumberTest extends TestCase
         $client->lookups = $lookups->reveal();
 
         $options = ['client' => $client->reveal()];
+        if ($countryCode !== '') {
+            $options['countryCode'] = $countryCode;
+        }
+
         $validator = new PhoneNumber($options);
 
         $this->assertTrue($validator->isValid($phoneNumberInternational));
@@ -68,10 +61,17 @@ class PhoneNumberTest extends TestCase
     /**
      * @dataProvider invalidPhoneNumberProvider
      */
-    public function testCanSuccessfullyValidateInvalidPhoneNumbers(string $phoneNumber): void
+    public function testCanSuccessfullyValidateInvalidPhoneNumbers(string $phoneNumber, string $countryCode = ''): void
     {
+        $fetchData = [
+            "type" => ["carrier"]
+        ];
+        if ($countryCode !== '') {
+            $fetchData["countryCode"] = $countryCode;
+        }
+
         $phoneNumberContext = $this->prophesize(Lookups\V1\PhoneNumberContext::class);
-        $phoneNumberContext->fetch(["type" => ["carrier"]])
+        $phoneNumberContext->fetch($fetchData)
             ->shouldBeCalled()
             ->willThrow(TwilioException::class);
 
@@ -90,15 +90,27 @@ class PhoneNumberTest extends TestCase
         $client->lookups = $lookups->reveal();
 
         $options = ['client' => $client->reveal()];
+        if ($countryCode !== '') {
+            $options['countryCode'] = $countryCode;
+        }
+
         $validator = new PhoneNumber($options);
 
         $this->assertFalse($validator->isValid($phoneNumber));
+
+        $expectedMessage = ($countryCode === '')
+            ? "'%s' is not a valid phone number in E.164 format."
+            : "'%s' is not a valid nationally formatted phone number." ;
+
+        $message = function () use ($countryCode, $validator) {
+            return ($countryCode === '')
+                ? $validator->getMessages()[PhoneNumber::PHONE_NUMBER_INTL]
+                : $validator->getMessages()[PhoneNumber::PHONE_NUMBER_NTL];
+        };
+
         $this->assertEquals(
-            sprintf(
-                "'%s' is not a valid phone number in E.164 format.",
-                $phoneNumber
-            ),
-            $validator->getMessages()[PhoneNumber::PHONE_NUMBER]
+            sprintf($expectedMessage, $phoneNumber),
+            $message()
         );
     }
 
@@ -106,8 +118,14 @@ class PhoneNumberTest extends TestCase
     {
         return [
             [
-                '+4910000000000',
-                '0100 00000000',
+                    '+4910000000000',
+            ],
+            [
+                    '(510)867-5310',
+                    'US'
+            ],
+            [
+                    '0100 00000000',
             ]
         ];
     }
@@ -117,6 +135,10 @@ class PhoneNumberTest extends TestCase
         return [
             [
                 '+100'
+            ],
+            [
+                '+100',
+                'US'
             ]
         ];
     }
